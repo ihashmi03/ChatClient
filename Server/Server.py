@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-import socket
-import select
-import sys
+import socket, select, sys
 from thread import *
 
 HOST = '127.0.0.1'  # localhost
 PORT = 65432        # Port 
+
 
 try:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -17,26 +16,31 @@ try:
     
     list_of_clients = []
 
-    def groupthread(conn, addr):
+    def recvthread(conn, addr):
         #send a greeting
-        conn.send('Welcome to this chat')
-
+        #conn.send('Welcome to this chat')
         while True:
             try:
                 data = conn.recv(1024)
                 if data:
-                    print "<" + addr[0] + "> " + data
-                    #print data 
-                    message = sys.stdin.readline() 
-                    conn.send('<Server> '+message) 
-                    sys.stdout.write("<You>") 
-                    sys.stdout.write(message) 
-                    sys.stdout.flush()
+                    sys.stdout.write("<" + addr[0] + "> " + data)
                     message_to_send = "<" + addr[0] + "> " + data 
                     broadcast(message_to_send, conn)
-
                 else:
+                    remove(conn)
+            except:
+                continue
 
+    def sendthread(conn, addr):
+        while True:
+            try:
+                serverresponse = sys.stdin.readline()
+                if serverresponse:
+                    conn.send('<Server> '+serverresponse) 
+                    # sys.stdout.write("<You>") 
+                    # sys.stdout.write(serverresponse) 
+                    # sys.stdout.flush()
+                else:
                     remove(conn)
                 
             except:
@@ -64,8 +68,9 @@ try:
 
         print addr[0] + ' connected'
 
-        start_new_thread(groupthread,(conn,addr))
-        
+        start_new_thread(recvthread,(conn,addr))
+        start_new_thread(sendthread,(conn,addr))
+
 except socket.error as err:
     print 'socket creation failed with error %s' %(err)
 
